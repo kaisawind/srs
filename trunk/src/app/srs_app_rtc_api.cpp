@@ -205,7 +205,7 @@ srs_error_t SrsGoApiRtcPlay::do_serve_http(ISrsHttpResponseWriter* w, ISrsHttpMe
     local_sdp_str = srs_string_replace(local_sdp_str.c_str(), "\r\n", "\\r\\n");
 
     res->set("code", SrsJsonAny::integer(ERROR_SUCCESS));
-    res->set("server", SrsJsonAny::integer(SrsStatistic::instance()->server_id()));
+    res->set("server", SrsJsonAny::str(SrsStatistic::instance()->server_id().c_str()));
 
     // TODO: add candidates in response json?
 
@@ -557,7 +557,7 @@ srs_error_t SrsGoApiRtcPublish::do_serve_http(ISrsHttpResponseWriter* w, ISrsHtt
     local_sdp_str = srs_string_replace(local_sdp_str.c_str(), "\r\n", "\\r\\n");
 
     res->set("code", SrsJsonAny::integer(ERROR_SUCCESS));
-    res->set("server", SrsJsonAny::integer(SrsStatistic::instance()->server_id()));
+    res->set("server", SrsJsonAny::str(SrsStatistic::instance()->server_id().c_str()));
 
     // TODO: add candidates in response json?
 
@@ -786,7 +786,7 @@ srs_error_t SrsGoApiRtcNACK::serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessa
     res->set("code", SrsJsonAny::integer(ERROR_SUCCESS));
 
     if ((err = do_serve_http(w, r, res)) != srs_success) {
-        srs_warn("RTC NACK err %s", srs_error_desc(err).c_str());
+        srs_warn("RTC: NACK err %s", srs_error_desc(err).c_str());
         res->set("code", SrsJsonAny::integer(srs_error_code(err)));
         srs_freep(err);
     }

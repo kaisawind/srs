@@ -151,6 +151,16 @@ srs_thread_t srs_thread_self()
     return (srs_thread_t)st_thread_self();
 }
 
+void srs_thread_exit(void* retval)
+{
+    st_thread_exit(retval);
+}
+
+void srs_thread_yield()
+{
+    st_thread_yield();
+}
+
 srs_error_t srs_tcp_connect(string server, int port, srs_utime_t tm, srs_netfd_t* pstfd)
 {
     st_utime_t timeout = ST_UTIME_NO_TIMEOUT;
@@ -419,11 +429,6 @@ int srs_recvmsg(srs_netfd_t stfd, struct msghdr *msg, int flags, srs_utime_t tim
 int srs_sendmsg(srs_netfd_t stfd, const struct msghdr *msg, int flags, srs_utime_t timeout)
 {
     return st_sendmsg((st_netfd_t)stfd, msg, flags, (st_utime_t)timeout);
-}
-
-int srs_sendmmsg(srs_netfd_t stfd, struct srs_mmsghdr *msgvec, unsigned int vlen, int flags, srs_utime_t timeout)
-{
-    return st_sendmmsg((st_netfd_t)stfd, (struct st_mmsghdr*)msgvec, vlen, flags, (st_utime_t)timeout);
 }
 
 srs_netfd_t srs_accept(srs_netfd_t stfd, struct sockaddr *addr, int *addrlen, srs_utime_t timeout)

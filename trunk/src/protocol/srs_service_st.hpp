@@ -57,6 +57,8 @@ extern srs_error_t srs_fd_keepalive(int fd);
 
 // Get current coroutine/thread.
 extern srs_thread_t srs_thread_self();
+extern void srs_thread_exit(void* retval);
+extern void srs_thread_yield();
 
 // For client, to open socket and connect to server.
 // @param tm The timeout in srs_utime_t.
@@ -92,14 +94,6 @@ extern int srs_recvfrom(srs_netfd_t stfd, void *buf, int len, struct sockaddr *f
 extern int srs_sendto(srs_netfd_t stfd, void *buf, int len, const struct sockaddr *to, int tolen, srs_utime_t timeout);
 extern int srs_recvmsg(srs_netfd_t stfd, struct msghdr *msg, int flags, srs_utime_t timeout);
 extern int srs_sendmsg(srs_netfd_t stfd, const struct msghdr *msg, int flags, srs_utime_t timeout);
-
-// @see http://man7.org/linux/man-pages/man2/sendmmsg.2.html
-#include <sys/socket.h>
-struct srs_mmsghdr {
-   struct msghdr msg_hdr;  /* Message header */
-   unsigned int  msg_len;  /* Number of bytes transmitted */
-};
-extern int srs_sendmmsg(srs_netfd_t stfd, struct srs_mmsghdr *msgvec, unsigned int vlen, int flags, srs_utime_t timeout);
 
 extern srs_netfd_t srs_accept(srs_netfd_t stfd, struct sockaddr *addr, int *addrlen, srs_utime_t timeout);
 

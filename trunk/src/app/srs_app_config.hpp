@@ -499,6 +499,8 @@ public:
     virtual std::string get_stream_caster_output(SrsConfDirective* conf);
     // Get the listen port of stream caster.
     virtual int get_stream_caster_listen(SrsConfDirective* conf);
+    // Get the listen port type of stream caster.
+    virtual bool get_stream_caster_tcp_enable(SrsConfDirective* conf);
     // Get the min udp port for rtp of stream caster rtsp.
     virtual int get_stream_caster_rtp_port_min(SrsConfDirective* conf);
     // Get the max udp port for rtp of stream caster rtsp.
@@ -532,6 +534,19 @@ public:
     virtual int get_rtc_server_reuseport();
     virtual bool get_rtc_server_merge_nalus();
     virtual bool get_rtc_server_perf_stat();
+private:
+    SrsConfDirective* get_rtc_server_rtp_cache();
+public:
+    virtual bool get_rtc_server_rtp_cache_enabled();
+    virtual uint64_t get_rtc_server_rtp_cache_pkt_size();
+    virtual uint64_t get_rtc_server_rtp_cache_payload_size();
+private:
+    virtual SrsConfDirective* get_rtc_server_rtp_msg_cache();
+public:
+    virtual bool get_rtc_server_rtp_msg_cache_enabled();
+    virtual uint64_t get_rtc_server_rtp_msg_cache_msg_size();
+    virtual uint64_t get_rtc_server_rtp_msg_cache_buffer_size();
+public:
     virtual bool get_rtc_server_black_hole();
     virtual std::string get_rtc_server_black_hole_addr();
 private:
@@ -548,6 +563,7 @@ public:
     std::string get_rtc_dtls_version(std::string vhost);
     int get_rtc_drop_for_pt(std::string vhost);
     bool get_rtc_nack_enabled(std::string vhost);
+    bool get_rtc_nack_no_copy(std::string vhost);
     bool get_rtc_twcc_enabled(std::string vhost);
 
 // vhost specified section
@@ -1082,6 +1098,8 @@ private:
     // Get the stats directive.
     virtual SrsConfDirective* get_stats();
 public:
+    // Whether enabled stats.
+    virtual bool get_stats_enabled();
     // Get the network device index, used to retrieve the ip of device,
     // For heartbeat to report to server, or to get the local ip.
     // For example, 0 means the eth0 maybe.
