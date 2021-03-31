@@ -17,7 +17,8 @@ SRS is a RTMP/HLS/WebRTC/SRT/GB28181 streaming cluster, high efficiency, stable 
 
 ```
 git clone https://gitee.com/winlinvip/srs.oschina.git srs &&
-cd srs/trunk && git remote set-url origin https://github.com/ossrs/srs.git && git pull
+cd srs/trunk && git remote set-url origin https://github.com/ossrs/srs.git && 
+git checkout develop && git pull
 ```
 
 > Note: We use [mirrors(gitee)](#mirrors) here, but it's also ok to directly clone by `git clone https://github.com/ossrs/srs.git && cd srs/trunk`
@@ -155,6 +156,24 @@ For previous versions, please read:
 
 ## V4 changes
 
+* v4.0, 2021-03-02, Upgrade libsrtp from 2.0.0 to 2.3.0, with source code. 4.0.79
+* v4.0, 2021-03-01, Upgrade openssl from 1.1.0e to 1.1.1b, with source code. 4.0.78
+* v4.0, 2021-03-01, Enable Object Cache and Zero Copy Nack by default. 4.0.77
+* v4.0, 2021-02-28, RTC: Support high performance [Zero Copy NACK](https://github.com/ossrs/srs/commit/36ea67359e55c94ab044cee4b6a4ec901a83a287#commitcomment-47654868). 4.0.76
+* v4.0, 2021-02-27, RTC: Support [Object Cache Pool](https://github.com/ossrs/srs/commit/14bfc98122bba369572417c19ebb2a61b373fc45#commitcomment-47655008) for performance. 4.0.75
+* v4.0, 2021-02-12, RTC: Support [High Resolution(about 25ms) Timer](https://github.com/ossrs/srs/commit/c5d2027f9af77fc2d34a6b6ca941c0f0fbdd10c4#commitcomment-47655747). 4.0.72
+* v4.0, 2021-02-10, RTC: [Improve performance about 700+](https://github.com/ossrs/srs/commit/b431ad738c39f34a5a0a39e81beb7854223db761#commitcomment-47655935) streams. 4.0.71
+* v4.0, 2021-02-04, At least wait 1ms when <1ms, to avoid epoll_wait spin loop. 4.0.66
+* v4.0, 2021-01-31, Enable -std=c++11 by default. 4.0.65
+* v4.0, 2021-01-25, Enable --nasm and --srtp-asm by default for performance. 4.0.64
+* v4.0, 2021-01-20, Support HTTP-FLV and HLS for srs-player by H5. 4.0.63
+* v4.0, 2021-01-08, HTML5 video tag resolution adaptive. 4.0.59
+* v4.0, 2021-01-08, Fix memory leak and bugs for RTC. 4.0.58
+* v4.0, 2021-01-06, Merge #2109, Refine srs_string_split.
+* v4.0, 2021-01-06, Merge #2109, Fix bugs for GB28181.
+* v4.0, 2020-12-24, Support disable CherryPy. 4.0.57
+* v4.0, 2020-11-12, For [#1998][bug #1998], Support Firefox, use PT in offer. 4.0.55
+* v4.0, 2020-11-11, For [#1508][bug #1508], Transform http header name to upper camel case. 4.0.54
 * v4.0, 2020-11-06, For [#1657][bug #1657], Read cached data first in SSL. 4.0.48
 * v4.0, 2020-11-06, For [#1657][bug #1657-3], support HTTPS Streaming(HTTPS-FLV, etc). 4.0.47
 * v4.0, 2020-11-06, For [#1657][bug #1657-2], support HTTPS API. 4.0.46
@@ -206,6 +225,12 @@ For previous versions, please read:
 
 ## V3 changes
 
+* v3.0, 2021-01-07, Change id from int to string for the statistics. 3.0.157
+* <strong>v3.0, 2021-01-02, [3.0 release3(3.0.156)][r3.0r3] released. 122736 lines.</strong>
+* v3.0, 2020-12-26, For RTMP edge/forward, pass vhost in tcUrl, not in stream. 3.0.156
+* v3.0, 2020-12-17, Fix [#1694][bug #1694], Support DVR 2GB+ MP4 file. 3.0.155
+* v3.0, 2020-12-17, Fix [#1548][bug #1548], Add edts in MP4 for Windows10. 3.0.154
+* <strong>v3.0, 2020-10-31, [3.0 release2(3.0.153)][r3.0r2] released. 122663 lines.</strong>
 * v3.0, 2020-10-31, Fix [#509][bug #509], Always malloc stack on heap. 3.0.153
 * v3.0, 2020-10-31, Remove some global elements for debugging. 3.0.152
 * v3.0, 2020-10-31, Use global _srs_server for debugging. 3.0.151
@@ -834,6 +859,8 @@ For previous versions, please read:
 
 ## Releases
 
+* 2021-01-02, [Release v3.0-r3][r3.0r3], 3.0 release3, 3.0.156, 122736 lines.
+* 2020-10-31, [Release v3.0-r2][r3.0r2], 3.0 release2, 3.0.153, 122663 lines.
 * 2020-10-10, [Release v3.0-r1][r3.0r1], 3.0 release1, 3.0.144, 122674 lines.
 * 2020-06-27, [Release v3.0-r0][r3.0r0], 3.0 release0, 3.0.141, 122674 lines.
 * 2020-03-29, [Release v3.0-b3][r3.0b4], 3.0 beta4, 3.0.139, 122674 lines.
@@ -1778,6 +1805,8 @@ Winlin
 [bug #1629]: https://github.com/ossrs/srs/issues/1629
 [bug #1780]: https://github.com/ossrs/srs/issues/1780
 [bug #1987]: https://github.com/ossrs/srs/issues/1987
+[bug #1548]: https://github.com/ossrs/srs/issues/1548
+[bug #1694]: https://github.com/ossrs/srs/issues/1694
 [bug #yyyyyyyyyyyyy]: https://github.com/ossrs/srs/issues/yyyyyyyyyyyyy
 
 [bug #1631]: https://github.com/ossrs/srs/issues/1631
@@ -1788,10 +1817,13 @@ Winlin
 [bug #1657-1]: https://github.com/ossrs/srs/issues/1657#issuecomment-720889906
 [bug #1657-2]: https://github.com/ossrs/srs/issues/1657#issuecomment-722904004
 [bug #1657-3]: https://github.com/ossrs/srs/issues/1657#issuecomment-722971676
+[bug #1998]: https://github.com/ossrs/srs/issues/1998
 [bug #zzzzzzzzzzzzz]: https://github.com/ossrs/srs/issues/zzzzzzzzzzzzz
 
 [exo #828]: https://github.com/google/ExoPlayer/pull/828
 
+[r3.0r3]: https://github.com/ossrs/srs/releases/tag/v3.0-r3
+[r3.0r2]: https://github.com/ossrs/srs/releases/tag/v3.0-r2
 [r3.0r1]: https://github.com/ossrs/srs/releases/tag/v3.0-r1
 [r3.0r0]: https://github.com/ossrs/srs/releases/tag/v3.0-r0
 [r3.0b4]: https://github.com/ossrs/srs/releases/tag/v3.0-b4

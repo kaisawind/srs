@@ -1692,11 +1692,17 @@ SrsSourceManager* _srs_sources = new SrsSourceManager();
 SrsSourceManager::SrsSourceManager()
 {
     lock = NULL;
+    timer_ = NULL;
 }
 
 SrsSourceManager::~SrsSourceManager()
 {
     srs_mutex_destroy(lock);
+}
+
+srs_error_t SrsSourceManager::initialize()
+{
+    return setup_ticks();
 }
 
 srs_error_t SrsSourceManager::fetch_or_create(SrsRequest* r, ISrsSourceHandler* h, SrsSource** pps)
@@ -1792,28 +1798,37 @@ void SrsSourceManager::dispose()
     return;
 }
 
-srs_error_t SrsSourceManager::cycle()
+srs_error_t SrsSourceManager::setup_ticks()
 {
-    SrsContextId cid = _srs_context->get_id();
-    srs_error_t err = do_cycle();
-    _srs_context->set_id(cid);
-    
+    srs_error_t err = srs_success;
+
+    srs_freep(timer_);
+    timer_ = new SrsHourGlass("sources", this, 1 * SRS_UTIME_SECONDS);
+
+    if ((err = timer_->tick(1, 1 * SRS_UTIME_SECONDS)) != srs_success) {
+        return srs_error_wrap(err, "tick");
+    }
+
+    if ((err = timer_->start()) != srs_success) {
+        return srs_error_wrap(err, "timer");
+    }
+
     return err;
 }
 
-srs_error_t SrsSourceManager::do_cycle()
+srs_error_t SrsSourceManager::notify(int event, srs_utime_t interval, srs_utime_t tick)
 {
     srs_error_t err = srs_success;
-    
+
     std::map<std::string, SrsSource*>::iterator it;
     for (it = pool.begin(); it != pool.end();) {
         SrsSource* source = it->second;
-        
+
         // Do cycle source to cleanup components, such as hls dispose.
         if ((err = source->cycle()) != srs_success) {
             return srs_error_wrap(err, "source=%s/%s cycle", source->source_id().c_str(), source->pre_source_id().c_str());
         }
-        
+
         // TODO: FIXME: support source cleanup.
         // @see https://github.com/ossrs/srs/issues/713
         // @see https://github.com/ossrs/srs/issues/714
@@ -1828,7 +1843,7 @@ srs_error_t SrsSourceManager::do_cycle()
                 _srs_context->set_id(cid);
             }
             srs_trace("cleanup die source, total=%d", (int)pool.size());
-            
+
             srs_freep(source);
             pool.erase(it++);
         } else {
@@ -1838,7 +1853,7 @@ srs_error_t SrsSourceManager::do_cycle()
         ++it;
 #endif
     }
-    
+
     return err;
 }
 
@@ -2362,7 +2377,11 @@ srs_error_t SrsSource::on_video_imp(SrsSharedPtrMessage* msg)
 
     // For bridger to consume the message.
     if (bridger && (err = bridger->on_video(msg)) != srs_success) {
-        return srs_error_wrap(err, "bridger consume video");
+        // rtc doesn't support hevc, here fails if it's a hevc key frame
+        // so consumers can't get 1c01 VideoTag
+        // return srs_error_wrap(err, "bridger consume video");
+        // srs_warn("rtc on video err %s", srs_error_desc(err).c_str());
+        srs_freep(err);
     }
 
     // copy to all consumer

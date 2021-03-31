@@ -117,12 +117,6 @@ else
     srs_undefine_macro "SRS_HTTPS" $SRS_AUTO_HEADERS_H
 fi
 
-if [ $SRS_MEM_WATCH = YES ]; then
-    srs_define_macro "SRS_MEM_WATCH" $SRS_AUTO_HEADERS_H
-else
-    srs_undefine_macro "SRS_MEM_WATCH" $SRS_AUTO_HEADERS_H
-fi
-
 if [ $SRS_UTEST = YES ]; then
     srs_define_macro "SRS_UTEST" $SRS_AUTO_HEADERS_H
 else
@@ -199,6 +193,12 @@ else
     srs_undefine_macro "SRS_DEBUG" $SRS_AUTO_HEADERS_H
 fi
 
+if [ $SRS_DEBUG_STATS = YES ]; then
+    srs_define_macro "SRS_DEBUG_STATS" $SRS_AUTO_HEADERS_H
+else
+    srs_undefine_macro "SRS_DEBUG_STATS" $SRS_AUTO_HEADERS_H
+fi
+
 # prefix
 echo "" >> $SRS_AUTO_HEADERS_H
 echo "#define SRS_PREFIX \"${SRS_PREFIX}\"" >> $SRS_AUTO_HEADERS_H
@@ -212,6 +212,7 @@ if [[ -f ../AUTHORS.txt ]]; then
 	SRS_CONSTRIBUTORS=`cat ../AUTHORS.txt|grep "*"|awk '{print $2}'`
 	echo "#define SRS_CONSTRIBUTORS \"\\" >> $SRS_AUTO_HEADERS_H
 	for CONTRIBUTOR in $SRS_CONSTRIBUTORS; do
+	    CONTRIBUTOR=`echo $CONTRIBUTOR|sed 's/@users.noreply.github.com>/@github>/g'`
 	    echo "${CONTRIBUTOR} \\" >> $SRS_AUTO_HEADERS_H
 	done
 	echo "\"" >> $SRS_AUTO_HEADERS_H
