@@ -71,4 +71,11 @@ CONTRIBUTORS ordered by first contribution.
 * chenchengbin<chenchengbin@yy.com>
 * chenhaibo<chenhaibo@RD-CHB-0476-01>
 * jasongwq<jasongwq@gmail.com>
-* xialixin@kanzhun.com<xialixin@kanzhun.com>
+* xialixin<xialixin@kanzhun.com>
+* yinjiaoyuan<yinjiaoyuan@163.com>
+* PieerePi<pihuibin@hotmail.com>
+* JesseXi<jesse.jinjin@wo.cn>
+* PieerePi<40780488+PieerePi@users.noreply.github.com>
+* ghostsf<ghost_sf@163.com>
+* xbpeng121<53243357+xbpeng121@users.noreply.github.com>
+* johzzy<hellojinqiang@gmail.com>

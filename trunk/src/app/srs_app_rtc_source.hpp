@@ -36,6 +36,7 @@
 #include <srs_app_rtc_sdp.hpp>
 #include <srs_service_st.hpp>
 #include <srs_app_source.hpp>
+#include <srs_kernel_rtc_rtp.hpp>
 
 class SrsRequest;
 class SrsMetaCache;
@@ -46,6 +47,7 @@ class SrsRtcStream;
 class SrsRtcFromRtmpBridger;
 class SrsAudioRecode;
 class SrsRtpPacket2;
+class SrsRtpPacketCacheHelper;
 class SrsSample;
 class SrsRtcStreamDescription;
 class SrsRtcTrackDescription;
@@ -53,8 +55,8 @@ class SrsRtcConnection;
 class SrsRtpRingBuffer;
 class SrsRtpNackForReceiver;
 class SrsJsonObject;
-class SrsRtcPlayStreamStatistic;
 class SrsErrorPithyPrint;
+class SrsRtcDummyBridger;
 
 class SrsNtp
 {
@@ -94,8 +96,8 @@ public:
     // Put RTP packet into queue.
     // @note We do not drop packet here, but drop it in sender.
     srs_error_t enqueue(SrsRtpPacket2* pkt);
-    // Get all RTP packets from queue.
-    virtual srs_error_t dump_packets(std::vector<SrsRtpPacket2*>& pkts);
+    // For RTC, we only got one packet, because there is not many packets in queue.
+    virtual srs_error_t dump_packet(SrsRtpPacket2** ppkt);
     // Wait for at-least some messages incoming in queue.
     virtual void wait(int nb_msgs);
 };
@@ -159,7 +161,7 @@ private:
     SrsRequest* req;
     ISrsRtcPublishStream* publish_stream_;
     // Transmux RTMP to RTC.
-    ISrsSourceBridger* bridger_;
+    SrsRtcDummyBridger* bridger_;
     // Steam description for this steam.
     SrsRtcStreamDescription* stream_desc_;
 private:
@@ -215,8 +217,19 @@ public:
     // Consume the shared RTP packet, user must free it.
     srs_error_t on_rtp(SrsRtpPacket2* pkt);
     // Set and get stream description for souce
+    bool has_stream_desc();
     void set_stream_desc(SrsRtcStreamDescription* stream_desc);
     std::vector<SrsRtcTrackDescription*> get_track_desc(std::string type, std::string media_type);
+};
+
+// A helper class, to release the packet to cache.
+class SrsRtpPacketCacheHelper
+{
+public:
+    SrsRtpPacket2* pkt;
+public:
+    SrsRtpPacketCacheHelper();
+    virtual ~SrsRtpPacketCacheHelper();
 };
 
 #ifdef SRS_FFMPEG_FIT
@@ -249,29 +262,36 @@ public:
     virtual srs_error_t on_audio(SrsSharedPtrMessage* msg);
 private:
     srs_error_t transcode(char* adts_audio, int nn_adts_audio);
-    srs_error_t package_opus(char* data, int size, SrsRtpPacket2** ppkt);
+    srs_error_t package_opus(char* data, int size, SrsRtpPacketCacheHelper* helper);
 public:
     virtual srs_error_t on_video(SrsSharedPtrMessage* msg);
 private:
     srs_error_t filter(SrsSharedPtrMessage* msg, SrsFormat* format, bool& has_idr, std::vector<SrsSample*>& samples);
-    srs_error_t package_stap_a(SrsRtcStream* source, SrsSharedPtrMessage* msg, SrsRtpPacket2** ppkt);
-    srs_error_t package_nalus(SrsSharedPtrMessage* msg, const std::vector<SrsSample*>& samples, std::vector<SrsRtpPacket2*>& pkts);
-    srs_error_t package_single_nalu(SrsSharedPtrMessage* msg, SrsSample* sample, std::vector<SrsRtpPacket2*>& pkts);
-    srs_error_t package_fu_a(SrsSharedPtrMessage* msg, SrsSample* sample, int fu_payload_size, std::vector<SrsRtpPacket2*>& pkts);
-    srs_error_t consume_packets(std::vector<SrsRtpPacket2*>& pkts);
+    srs_error_t package_stap_a(SrsRtcStream* source, SrsSharedPtrMessage* msg, SrsRtpPacketCacheHelper* helper);
+    srs_error_t package_nalus(SrsSharedPtrMessage* msg, const std::vector<SrsSample*>& samples, std::vector<SrsRtpPacketCacheHelper*>& helpers);
+    srs_error_t package_single_nalu(SrsSharedPtrMessage* msg, SrsSample* sample, std::vector<SrsRtpPacketCacheHelper*>& helpers);
+    srs_error_t package_fu_a(SrsSharedPtrMessage* msg, SrsSample* sample, int fu_payload_size, std::vector<SrsRtpPacketCacheHelper*>& helpers);
+    srs_error_t consume_packets(std::vector<SrsRtpPacketCacheHelper*>& helpers);
 };
 #endif
 
 class SrsRtcDummyBridger : public ISrsSourceBridger
 {
+private:
+    SrsRtcStream* rtc_;
+    // The optional implementation bridger, ignore if NULL.
+    ISrsSourceBridger* impl_;
 public:
-    SrsRtcDummyBridger();
+    SrsRtcDummyBridger(SrsRtcStream* s);
     virtual ~SrsRtcDummyBridger();
 public:
     virtual srs_error_t on_publish();
     virtual srs_error_t on_audio(SrsSharedPtrMessage* audio);
     virtual srs_error_t on_video(SrsSharedPtrMessage* video);
     virtual void on_unpublish();
+public:
+    // Setup a new implementation bridger, which might be NULL to free previous one.
+    void setup(ISrsSourceBridger* impl);
 };
 
 // TODO: FIXME: Rename it.
@@ -280,6 +300,9 @@ class SrsCodecPayload
 public:
     std::string type_;
     uint8_t pt_;
+    // for publish, equals to PT of itself;
+    // for subscribe, is the PT of publisher;
+    uint8_t pt_of_publisher_;
     std::string name_;
     int sample_;
 
@@ -416,6 +439,7 @@ public:
     bool has_ssrc(uint32_t ssrc);
 public:
     void add_rtp_extension_desc(int id, std::string uri);
+    void del_rtp_extension_desc(std::string uri);
     void set_direction(std::string direction);
     void set_codec_payload(SrsCodecPayload* payload);
     // auxiliary paylod include red, rtx, ulpfec.
@@ -426,9 +450,6 @@ public:
     int get_rtp_extension_id(std::string uri);
 public:
     SrsRtcTrackDescription* copy();
-public:
-    // find media with payload type.
-    SrsMediaPayloadType generate_media_payload_type(int payload_type);
 };
 
 class SrsRtcStreamDescription
@@ -492,11 +513,14 @@ class SrsRtcRecvTrack
 protected:
     SrsRtcTrackDescription* track_desc_;
     SrsRtcTrackStatistic* statistic_;
-
+protected:
     SrsRtcConnection* session_;
     SrsRtpRingBuffer* rtp_queue_;
     SrsRtpNackForReceiver* nack_receiver_;
-
+private:
+    // By config, whether no copy.
+    bool nack_no_copy_;
+protected:
     // send report ntp and received time.
     SrsNtp last_sender_report_ntp;
     uint64_t last_sender_report_sys_time;
@@ -504,6 +528,8 @@ public:
     SrsRtcRecvTrack(SrsRtcConnection* session, SrsRtcTrackDescription* stream_descs, bool is_audio);
     virtual ~SrsRtcRecvTrack();
 public:
+    // SrsRtcSendTrack::set_nack_no_copy
+    void set_nack_no_copy(bool v) { nack_no_copy_ = v; }
     bool has_ssrc(uint32_t ssrc);
     uint32_t get_ssrc();
     void update_rtt(int rtt);
@@ -513,8 +539,10 @@ public:
     bool set_track_status(bool active);
     bool get_track_status();
     std::string get_track_id();
-protected:
-    srs_error_t on_nack(SrsRtpPacket2* pkt);
+public:
+    // Note that we can set the pkt to NULL to avoid copy, for example, if the NACK cache the pkt and
+    // set to NULL, nack nerver copy it but set the pkt to NULL.
+    srs_error_t on_nack(SrsRtpPacket2** ppkt);
 public:
     virtual srs_error_t on_rtp(SrsRtcStream* source, SrsRtpPacket2* pkt) = 0;
     virtual srs_error_t check_send_nacks() = 0;
@@ -522,21 +550,25 @@ protected:
     virtual srs_error_t do_check_send_nacks(uint32_t& timeout_nacks);
 };
 
-class SrsRtcAudioRecvTrack : public SrsRtcRecvTrack
+class SrsRtcAudioRecvTrack : virtual public SrsRtcRecvTrack, virtual public ISrsRtpPacketDecodeHandler
 {
 public:
     SrsRtcAudioRecvTrack(SrsRtcConnection* session, SrsRtcTrackDescription* track_desc);
     virtual ~SrsRtcAudioRecvTrack();
 public:
+    virtual void on_before_decode_payload(SrsRtpPacket2* pkt, SrsBuffer* buf, ISrsRtpPayloader** ppayload, SrsRtpPacketPayloadType* ppt);
+public:
     virtual srs_error_t on_rtp(SrsRtcStream* source, SrsRtpPacket2* pkt);
     virtual srs_error_t check_send_nacks();
 };
 
-class SrsRtcVideoRecvTrack : public SrsRtcRecvTrack
+class SrsRtcVideoRecvTrack : virtual public SrsRtcRecvTrack, virtual public ISrsRtpPacketDecodeHandler
 {
 public:
     SrsRtcVideoRecvTrack(SrsRtcConnection* session, SrsRtcTrackDescription* stream_descs);
     virtual ~SrsRtcVideoRecvTrack();
+public:
+    virtual void on_before_decode_payload(SrsRtpPacket2* pkt, SrsBuffer* buf, ISrsRtpPayloader** ppayload, SrsRtpPacketPayloadType* ppt);
 public:
     virtual srs_error_t on_rtp(SrsRtcStream* source, SrsRtpPacket2* pkt);
     virtual srs_error_t check_send_nacks();
@@ -554,21 +586,29 @@ protected:
     // NACK ARQ ring buffer.
     SrsRtpRingBuffer* rtp_queue_;
 private:
+    // By config, whether no copy.
+    bool nack_no_copy_;
     // The pithy print for special stage.
     SrsErrorPithyPrint* nack_epp;
 public:
     SrsRtcSendTrack(SrsRtcConnection* session, SrsRtcTrackDescription* track_desc, bool is_audio);
     virtual ~SrsRtcSendTrack();
 public:
+    // SrsRtcSendTrack::set_nack_no_copy
+    void set_nack_no_copy(bool v) { nack_no_copy_ = v; }
     bool has_ssrc(uint32_t ssrc);
     SrsRtpPacket2* fetch_rtp_packet(uint16_t seq);
     bool set_track_status(bool active);
     bool get_track_status();
     std::string get_track_id();
 public:
-    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt, SrsRtcPlayStreamStatistic& info) = 0;
+    // Note that we can set the pkt to NULL to avoid copy, for example, if the NACK cache the pkt and
+    // set to NULL, nack nerver copy it but set the pkt to NULL.
+    srs_error_t on_nack(SrsRtpPacket2** ppkt);
+public:
+    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt) = 0;
     virtual srs_error_t on_rtcp(SrsRtpPacket2* pkt) = 0;
-    virtual void on_recv_nack();
+    virtual srs_error_t on_recv_nack(const std::vector<uint16_t>& lost_seqs);
 };
 
 class SrsRtcAudioSendTrack : public SrsRtcSendTrack
@@ -577,7 +617,7 @@ public:
     SrsRtcAudioSendTrack(SrsRtcConnection* session, SrsRtcTrackDescription* track_desc);
     virtual ~SrsRtcAudioSendTrack();
 public:
-    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt, SrsRtcPlayStreamStatistic& info);
+    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt);
     virtual srs_error_t on_rtcp(SrsRtpPacket2* pkt);
 };
 
@@ -587,7 +627,7 @@ public:
     SrsRtcVideoSendTrack(SrsRtcConnection* session, SrsRtcTrackDescription* track_desc);
     virtual ~SrsRtcVideoSendTrack();
 public:
-    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt, SrsRtcPlayStreamStatistic& info);
+    virtual srs_error_t on_rtp(SrsRtpPacket2* pkt);
     virtual srs_error_t on_rtcp(SrsRtpPacket2* pkt);
 };
 
